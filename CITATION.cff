@@ -1,0 +1,37 @@
+cff-version: 1.2.0
+title: >-
+  Bulk RNA-seq Meta-Analysis Pipeline: a reproducible R workflow for
+  cross-study differential expression, cell-composition control and
+  random-effects meta-analysis
+message: >-
+  If you use this pipeline in work you are publishing, please cite it using
+  these metadata, and cite the underlying methods (DESeq2, apeglm, metafor,
+  xCell, sva, limma) as well.
+type: software
+authors:
+  - name: DockVision
+    website: "https://github.com/<username>"
+repository-code: "https://github.com/<username>/<repository>"
+url: "https://github.com/<username>/<repository>"
+abstract: >-
+  An R pipeline for bulk RNA-seq meta-analysis across published GEO series.
+  It fetches and validates each dataset, collapses technical replicates, runs
+  differential expression with effect-size shrinkage, quantifies cell-composition
+  confounding through marker panels, covariate-adjusted models and xCell
+  deconvolution, pools studies with metafor random-effects models reporting
+  heterogeneity statistics, and produces a publication-grade figure set. Built
+  around the ways cross-study RNA-seq meta-analysis goes wrong rather than around
+  the happy path.
+keywords:
+  - RNA-seq
+  - meta-analysis
+  - differential expression
+  - bioinformatics
+  - DESeq2
+  - metafor
+  - deconvolution
+  - reproducible research
+  - GEO
+license: MIT
+version: 1.0.0
+date-released: "2026-08-24"

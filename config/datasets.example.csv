@@ -1,0 +1,27 @@
+# DockVision bulk RNA-seq meta-analysis pipeline -- example dataset registry.
+#
+# Copy this file to config/datasets.csv and edit it. That copy is what the
+# pipeline reads; this one stays as a reference.
+#
+# gse           GEO series accession
+# condition     grouping label -- disease, treatment, cohort, whatever you are
+#               comparing. Used for facets, palettes and meta-analysis subgroups
+# use           PRIMARY / SECONDARY / VALIDATION / OPTIONAL. Free text, carried
+#               through to the outputs so a reader can see which studies carried
+#               a result and which only replicated it
+# tissue_class  tissue | blood -- selects the marker panel in MARKERS
+#               (00_config.R). Check the GEO source_name field; do not infer it
+#               from the disease name
+# arm           case_control (differential expression) | atlas (co-expression
+#               across baseline samples only)
+# de_capable    TRUE/FALSE. FALSE for series with no control group
+#
+# The four rows below are real public GEO series, included so the pipeline runs
+# out of the box on a small, mixed example: one blood case/control study, one
+# tissue case/control study, and two baseline studies for the co-expression
+# atlas. Replace them with your own.
+gse,condition,use,tissue_class,arm,de_capable
+GSE112087,SLE,PRIMARY,blood,case_control,TRUE
+GSE213001,ILD,PRIMARY,tissue,case_control,TRUE
+GSE131681,Baseline,PRIMARY,tissue,atlas,FALSE
+GSE128179,Baseline,PRIMARY,tissue,atlas,FALSE
