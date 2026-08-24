@@ -58,6 +58,28 @@ xCell enrichment scores for every bulk dataset, reported as supplementary
 results with a between-group test. A four-gene marker panel says "endothelial
 genes moved"; deconvolution says by how much, with a p-value.
 
+**S2.5 — Generalise the marker panel to the whole cell-type space.**
+S2.1–S2.3 test the gene against *one* hand-picked panel, which answers the
+question you thought to ask. `60_celltype_atlas.R` asks it of every population
+the deconvolution can score: within each cohort, correlate expression against
+each cell type's enrichment score, then pool those correlations across cohorts
+by random-effects meta-analysis (S4), BH-adjusted across the cell types tested
+for that gene. A cell type is pooled only if at least `MIN_K` cohorts supplied a
+reliable estimate; the rest are plotted but explicitly marked untested, so the
+correction denominator is never misstated.
+
+This turns the composition confound from a caveat into the measurement, and it
+is a genuinely independent check: a gene whose marker-panel verdict says
+"composition shift" should show its strongest pooled association with exactly
+the population those markers describe.
+
+**What the number does not mean.** A positive *r* means *samples richer in that
+cell type express more of the gene*. It is an association across samples, not
+expression measured inside that cell type — composition, group status and any
+correlated cell type can all produce it. Deconvolution scores are estimates, and
+this limitation belongs in the figure caption and the interpretation (S7), not
+only in the code.
+
 ---
 
 ## S3. Batch correction and structure
@@ -109,9 +131,12 @@ Studies where a gene fell below the expression filter are reported as
 
 ## S6. Figures
 
-One shared visual system across the entire figure set — theme, palette, font
-size and mark scale defined once in `00_theme.R` (working figures) and
-`00_theme_publication.R` (final figures), and sourced everywhere.
+One shared visual system across the entire nine-figure set — theme, palette,
+font size and mark scale defined once in `00_theme.R` (working figures) and
+`00_theme_publication.R` (final figures), and sourced everywhere. Figures 1–7
+come from `50_publication_figures.R` and Figures 8–9 from
+`61_celltype_atlas_figure.R`, but both use the same saver, the same ink tokens
+and the same palette, so the set reads as one document.
 
 Every figure carries:
 - axis labels **with units**,
@@ -126,6 +151,12 @@ separately from the text that qualified them.
 Colour-blind-safe palettes throughout, and colour is assigned by the job it
 does: categorical pairs for case/control, a diverging scale with a neutral
 midpoint for direction of effect, a single-hue ramp for magnitude.
+
+Where a categorical palette is pushed to its limit — the five lineage families
+in Figures 8–9 — identity never rests on hue alone: every category is named on
+an axis, the family blocks sit contiguously and are separated by rules, sign is
+carried redundantly by mark shape, and magnitude by mark **area** rather than
+radius, which exaggerates by the square.
 
 ---
 

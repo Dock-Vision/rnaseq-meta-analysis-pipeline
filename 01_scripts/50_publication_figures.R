@@ -732,21 +732,32 @@ fig6_pca <- function(ellipse = c("filled","outline","none","before_only")) {
                                     "atlas_variance_before_after_combat.csv"))
   gv <- function(cov, when) vsum[[paste0("total_var_explained_pct_", when)]][vsum$covariate == cov]
 
+  # Both categorical channels are sized from the DATA, never hardcoded: the
+  # number of studies and cell types comes from the user's registry, and a
+  # fixed-length manual scale errors out the moment a fifth level appears.
+  n_study <- length(unique(d$study))
+  n_ctype <- length(unique(d$cell_type))
+  sh <- pub_cat_shapes(n_ctype)
+
   ggplot(d, aes(PC1, PC2)) +
     geom_hline(yintercept = 0, colour = INK$rule, linewidth = 0.3) +
     geom_vline(xintercept = 0, colour = INK$rule, linewidth = 0.3) +
     ell_layer(d, ellipse) +
-    geom_point(aes(colour = study, shape = cell_type), size = 3.0,
-               alpha = 0.85, stroke = 0.8) +
+    (if (is.null(sh))
+       geom_point(aes(colour = study), shape = 16, size = 3.0,
+                  alpha = 0.85, stroke = 0.8)
+     else
+       geom_point(aes(colour = study, shape = cell_type), size = 3.0,
+                  alpha = 0.85, stroke = 0.8)) +
     facet_wrap(~ panel, ncol = 2) +
     coord_cartesian(xlim = pad(xr), ylim = pad(yr)) +
-    scale_colour_manual(values = c("#2a78d6","#eb6834","#1baf7a","#4a3aa7"),
+    scale_colour_manual(values = pub_cat_colours(n_study),
                         name = "Study", aesthetics = c("colour","fill")) +
-    scale_shape_manual(values = c(16, 17, 15, 18), name = "Cell type") +
+    (if (is.null(sh)) NULL else scale_shape_manual(values = sh, name = "Cell type")) +
     labs(
-      title = "Batch correction of the healthy endothelial atlas",
+      title = "Batch correction of the baseline co-expression atlas",
       subtitle = sprintf(
-        "%d samples · %d studies · %d endothelial cell types. Both panels share one PCA basis, fitted on the uncorrected data, so the axes and limits are identical.\nBy PC regression across the top 5 components, study batch accounts for %.1f%% of total variance before correction and %.1f%% after; cell type %.1f%% and %.1f%%.",
+        "%d samples · %d studies · %d cell types. Both panels share one PCA basis, fitted on the uncorrected data, so the axes and limits are identical.\nBy PC regression across the top 5 components, study batch accounts for %.1f%% of total variance before correction and %.1f%% after; cell type %.1f%% and %.1f%%.",
         nrow(a$meta), length(unique(a$meta$study)), length(unique(a$meta$cell_type)),
         gv("study","before"), gv("study","after"),
         gv("cell_type","before"), gv("cell_type","after")),
@@ -757,8 +768,8 @@ fig6_pca <- function(ellipse = c("filled","outline","none","before_only")) {
         "Axis percentages describe the shared PCA basis; the subtitle percentages are a different quantity —\n",
         "variance attributable to each factor by PC regression — so the two sets of numbers are not expected to match. ComBat was applied with cell type protected via the\n",
         "model matrix, restricted to cell types present in >=2 studies and studies carrying >=2 cell types, because cell type is otherwise nested within study and the\n",
-        "correction is not estimable. Cell-type variance falls alongside batch variance, which is stated as a limitation. The two points at upper PC2 in the corrected panel\n",
-        "are HAEC samples from different studies (GSM3813815, GSM3666326); both pass expression QC and are retained.")) +
+        "correction is not estimable. Cell-type variance falls alongside batch variance, which is stated as a limitation. Samples that stay separated in the corrected\n",
+        "panel are inspected individually rather than trimmed, and are retained when they pass expression QC.")) +
     theme_pub(grid = "both") +
     theme(strip.text = element_text(size = rel(1.0), face = "bold"),
           strip.background = element_rect(fill = "#eeeef2", colour = NA),
@@ -829,13 +840,20 @@ fig7_correlation <- function() {
   if (is.null(pts)) return(pA)
 
   ct <- stats::cor.test(pts$gene_a, pts$gene_b)
+  # Same rule as Figure 6: both categorical scales are sized from the data.
+  n_ctype <- length(unique(pts$cell_type))
+  n_study <- length(unique(pts$study))
+  sh <- pub_cat_shapes(n_study)
+
   pB <- ggplot(pts, aes(gene_a, gene_b)) +
     geom_smooth(method = "lm", formula = y ~ x, colour = PUB_ACCENT,
                 fill = PUB_ACCENT, alpha = 0.10, linewidth = 0.65) +
-    geom_point(aes(colour = cell_type, shape = study), size = 2.3, alpha = 0.9) +
-    scale_colour_manual(values = c("#2a78d6","#eb6834","#1baf7a","#4a3aa7"),
-                        name = "Cell type") +
-    scale_shape_manual(values = c(16,17,15,18), name = "Study") +
+    (if (is.null(sh))
+       geom_point(aes(colour = cell_type), shape = 16, size = 2.3, alpha = 0.9)
+     else
+       geom_point(aes(colour = cell_type, shape = study), size = 2.3, alpha = 0.9)) +
+    scale_colour_manual(values = pub_cat_colours(n_ctype), name = "Cell type") +
+    (if (is.null(sh)) NULL else scale_shape_manual(values = sh, name = "Study")) +
     labs(subtitle = sprintf("SUPPORTING VIEW \u2014 batch-corrected integrated atlas\nr = %.3f [%.3f, %.3f], n = %d samples from %d studies",
                             ct$estimate, ct$conf.int[1], ct$conf.int[2],
                             nrow(pts), length(unique(pts$study))),
@@ -849,14 +867,21 @@ fig7_correlation <- function() {
     patchwork::wrap_plots(pA, pB, ncol = 2, widths = c(1, 1.15)) +
       patchwork::plot_annotation(
         title = sprintf("%s co-expression across baseline samples", GENE_TXT),
+        # Every number here is read from the data, never written in by hand --
+        # a caption that hardcodes a result silently lies the first time the
+        # analysis is re-run on anything else.
         caption = paste0(
-          "THE HEADLINE ESTIMATE IS THE LEFT PANEL: r = 0.909 [0.816, 0.956], pooled across all seven studies by random-effects meta-analysis (metafor, REML, Fisher z).\n",
-          "Correlations are computed WITHIN each study and only then pooled, so no between-study batch structure can inflate them. The right panel (r = 0.959) pools samples\n",
-          "across the four studies that survived the ComBat restriction; it shows the corrected atlas and is a supporting visualisation, NOT the claimed estimate \u2014 pooling\n",
-          "samples before correlating is exactly what the within-study design avoids. Small studies carry wide intervals: GSE163827 (n = 6) spans zero and GSE164868 (n = 6)\n",
-          "reaches 0.99; neither contradicts the pooled result, and the random-effects model weights them accordingly. Baseline (untreated) samples only \u2014 stimulated,\n",
-          "shear-stressed and cytokine-treated samples were excluded. Shaded band is the 95% confidence interval of the linear fit.\n",
-          "Cell-type colours are a categorical scale for vascular beds; this figure contains no disease contrast, so the red/blue direction scheme of Figures 1\u20135 does not apply here."),
+          sprintf("THE HEADLINE ESTIMATE IS THE LEFT PANEL: r = %.3f [%.3f, %.3f], pooled across all %d studies by random-effects meta-analysis (metafor, REML, Fisher z).\n",
+                  pool$pooled_r, pool$ci_low_r, pool$ci_high_r, pool$k),
+          sprintf("Correlations are computed WITHIN each study and only then pooled, so no between-study batch structure can inflate them. The right panel (r = %.3f) pools\n",
+                  unname(ct$estimate)),
+          sprintf("samples across the %d studies that survived the ComBat restriction; it shows the corrected atlas and is a supporting visualisation, NOT the claimed estimate\n",
+                  length(unique(pts$study))),
+          sprintf("\u2014 pooling samples before correlating is exactly what the within-study design avoids. Small studies carry wide intervals (smallest here n = %d); the\n",
+                  min(f$n)),
+          "random-effects model weights them accordingly. Baseline (untreated) samples only \u2014 stimulated, shear-stressed and cytokine-treated samples were excluded.\n",
+          "Shaded band is the 95% confidence interval of the linear fit.\n",
+          "Cell-type colours are a categorical scale; this figure contains no case/control contrast, so the direction scheme of Figures 1\u20135 does not apply here."),
         theme = theme_pub())
   } else pA
 }

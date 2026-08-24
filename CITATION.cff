@@ -10,9 +10,9 @@ message: >-
 type: software
 authors:
   - name: DockVision
-    website: "https://github.com/<username>"
-repository-code: "https://github.com/<username>/<repository>"
-url: "https://github.com/<username>/<repository>"
+    website: "https://github.com/Dock-Vision"
+repository-code: "https://github.com/Dock-Vision/rnaseq-meta-analysis-pipeline"
+url: "https://github.com/Dock-Vision/rnaseq-meta-analysis-pipeline"
 abstract: >-
   An R pipeline for bulk RNA-seq meta-analysis across published GEO series.
   It fetches and validates each dataset, collapses technical replicates, runs

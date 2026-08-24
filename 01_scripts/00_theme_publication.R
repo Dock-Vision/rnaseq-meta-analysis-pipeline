@@ -93,6 +93,55 @@ PUB_BOX_PT <- c(Control = "#8b8b95",
 PUB_ACCENT   <- "#e34948"   # pooled estimates, emphasis
 PUB_NEUTRAL  <- "#6f6f78"   # study-level marks
 
+# ---- categorical scales that grow with the data ----------------------------
+#
+# Figures 6 and 7 map two categorical variables -- study and cell type -- whose
+# number of levels depends entirely on the user's registry, not on this project.
+# A hardcoded four-value manual scale renders correctly for four levels and
+# ERRORS OUT at five, so both channels are generated from the level count.
+#
+# The first four values are the original curated set, so a four-level figure is
+# identical to the previous version; levels 5+ continue into a colour-blind-safe
+# extension. Past the end of the curated list the WHOLE scale is regenerated
+# from an HCL qualitative palette rather than recycled: a repeated colour or
+# shape is a wrong figure, not a cosmetic compromise.
+
+PUB_CAT <- c("#2a78d6",   # blue     -- the curated four, order preserved
+             "#eb6834",   # orange
+             "#1baf7a",   # green
+             "#4a3aa7",   # violet
+             "#c9a227",   # ochre    -- continuation
+             "#0f8a8f",   # teal
+             "#b8437f",   # magenta
+             "#7a5c3a")   # brown
+
+pub_cat_colours <- function(n) {
+  stopifnot(n >= 1)
+  if (n <= length(PUB_CAT)) return(unname(PUB_CAT[seq_len(n)]))
+  message(sprintf(paste0("[pub-theme] %d categories exceed the %d curated colours; ",
+                         "regenerating the scale from an HCL qualitative palette."),
+                  n, length(PUB_CAT)))
+  grDevices::hcl.colors(n, palette = "Dark 3")
+}
+
+# Solid marks first -- they hold up at small sizes and 600 dpi -- then open
+# marks, which stay distinguishable in print but read lighter.
+PUB_SHAPES <- c(16, 17, 15, 18, 8, 7, 3, 4, 10, 12, 13, 14)
+
+# Returns NULL when there are more levels than distinguishable shapes. Shape is
+# a low-capacity channel; recycling it would put two different levels behind the
+# same mark and the legend would assert a distinction the figure cannot make.
+# Callers drop the shape aesthetic entirely in that case and let colour carry
+# identity, which is honest about what is encoded.
+pub_cat_shapes <- function(n) {
+  stopifnot(n >= 1)
+  if (n <= length(PUB_SHAPES)) return(PUB_SHAPES[seq_len(n)])
+  message(sprintf(paste0("[pub-theme] %d categories exceed the %d distinguishable shapes; ",
+                         "dropping the shape encoding rather than repeating marks."),
+                  n, length(PUB_SHAPES)))
+  NULL
+}
+
 # ---- theme -----------------------------------------------------------------
 
 theme_pub <- function(base_size = PUB_BASE_SIZE, base_family = PUB_FONT,

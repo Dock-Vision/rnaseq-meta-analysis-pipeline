@@ -62,28 +62,42 @@ number, so any comment in a script can be traced to the rule it implements.
   │         ─ figures ─ sessionInfo ─ run-log row                │
   └─────────────────────────────────────────────────────────────┘
             │
-            ├───────────────────────────┬─────────────────────────┐
-            ▼                           ▼                         ▼
-  ┌──────────────────────┐  ┌────────────────────────┐  ┌──────────────────────┐
-  │ 20_meta_analysis.R   │  │ 30_coexpression_       │  │ 40_sensitivity_      │
-  │                      │  │    atlas.R             │  │    tests.R           │
-  │ random-effects       │  │ baseline samples only, │  │ is the effect real,  │
-  │ pooling; τ², I², Q;  │  │ ComBat protecting cell │  │ or a detection-floor │
-  │ tissue-stratified    │  │ type; within-study     │  │ artifact? three      │
-  │ subgroups +          │  │ correlation, then      │  │ independent tests    │
-  │ moderator test       │  │ pooled                 │  │                      │
-  └──────────────────────┘  └────────────────────────┘  └──────────────────────┘
-            │                           │                         │
-            └───────────────────────────┴─────────────────────────┘
-                                        ▼
-                          ┌──────────────────────────────┐
-                          │ 50_publication_figures.R     │
-                          │ the seven-figure set, 600 dpi │
-                          │ PNG + vector PDF              │
-                          └──────────────────────────────┘
+            │   all four read 10_run_dataset.R's outputs; none depends
+            │   on the others, so run whichever you need
+            │
+            ├──────────────────┬──────────────────┬──────────────────┐
+            ▼                  ▼                  ▼                  ▼
+  ┌──────────────────┐ ┌────────────────┐ ┌────────────────┐ ┌────────────────┐
+  │ 20_meta_         │ │ 30_coexpres-   │ │ 40_sensitivity │ │ 60_celltype_   │
+  │    analysis.R    │ │    sion_atlas.R│ │    _tests.R    │ │    atlas.R     │
+  │                  │ │                │ │                │ │                │
+  │ random-effects   │ │ baseline       │ │ is the effect  │ │ the gene vs    │
+  │ pooling;         │ │ samples only,  │ │ real, or a     │ │ EVERY xCell    │
+  │ τ², I², Q;       │ │ ComBat pro-    │ │ detection-     │ │ cell type,     │
+  │ tissue-strati-   │ │ tecting cell   │ │ floor artifact?│ │ pooled across  │
+  │ fied subgroups   │ │ type; within-  │ │ three inde-    │ │ cohorts — the  │
+  │ + moderator      │ │ study corr.,   │ │ pendent tests  │ │ whole cell-type│
+  │ test             │ │ then pooled    │ │                │ │ space, not one │
+  │                  │ │                │ │                │ │ marker panel   │
+  └──────────────────┘ └────────────────┘ └────────────────┘ └────────────────┘
+            │                  │                                     │
+            └────────┬─────────┘                                     │
+                     ▼                                               ▼
+  ┌──────────────────────────────┐              ┌──────────────────────────────┐
+  │ 50_publication_figures.R     │              │ 61_celltype_atlas_figure.R   │
+  │ Figures 1–7                  │              │ Figures 8–9 (one per gene)   │
+  └──────────────────────────────┘              └──────────────────────────────┘
+                     │                                          │
+                     └────────────────────┬─────────────────────┘
+                                          ▼
+                        the nine-figure set, 600 dpi PNG
+                                + vector PDF
 ```
 
-### The seven figures
+### The nine figures
+
+Figures 1–7 come from `50_publication_figures.R`; Figures 8–9 from
+`61_celltype_atlas_figure.R`, one per gene in `GENES_OF_INTEREST`.
 
 | # | Figure | Answers |
 |---|---|---|
@@ -94,6 +108,13 @@ number, so any comment in a script can be traced to the rule it implements.
 | 5 | Marker heatmap | Regulation, or composition shift? |
 | 6 | PCA | What is the sample structure, before and after batch correction? |
 | 7 | Correlation | Is the gene's normal co-expression relationship preserved? |
+| 8–9 | Cell-type association atlas | Across the *whole* cell-type space, which populations does each gene track with, and how consistently across cohorts? |
+
+Figures 8–9 are the marker panel of Figure 5 generalised: instead of four
+hand-picked genes, every cell type xCell can score, pooled across cohorts with
+heterogeneity statistics. Read the caveat in the caption — a positive *r* means
+*samples richer in that cell type express more of the gene*, which is an
+association across samples, **not** expression measured inside that cell type.
 
 ---
 
@@ -101,8 +122,8 @@ number, so any comment in a script can be traced to the rule it implements.
 
 ```bash
 # 1. clone
-git clone https://github.com/<your-username>/<your-repo>.git
-cd <your-repo>
+git clone https://github.com/Dock-Vision/rnaseq-meta-analysis-pipeline.git
+cd rnaseq-meta-analysis-pipeline
 
 # 2. install packages (system R, OUTSIDE any conda environment)
 Rscript 01_scripts/00_install_packages.R
@@ -124,7 +145,10 @@ Rscript 01_scripts/10_run_dataset.R GSE213001 2>&1 | tee 08_logs/GSE213001.log
 Rscript 01_scripts/20_meta_analysis.R        # pool the case/control studies
 Rscript 01_scripts/30_coexpression_atlas.R   # baseline co-expression atlas
 Rscript 01_scripts/40_sensitivity_tests.R    # optional: stress-test a result
-Rscript 01_scripts/50_publication_figures.R  # the final figure set
+Rscript 01_scripts/60_celltype_atlas.R       # gene vs cell-type association atlas
+
+Rscript 01_scripts/50_publication_figures.R  # Figures 1-7
+Rscript 01_scripts/61_celltype_atlas_figure.R # Figures 8-9
 ```
 
 **Always run from the project root**, not from inside `01_scripts/` — the
@@ -168,7 +192,9 @@ GEO sample IDs by any string rule.
   20_meta_analysis.R          random-effects pooling across studies
   30_coexpression_atlas.R     baseline co-expression atlas
   40_sensitivity_tests.R      detection-floor and compartment stress tests
-  50_publication_figures.R    the final seven-figure set
+  50_publication_figures.R    Figures 1-7 of the final set
+  60_celltype_atlas.R         gene vs every xCell cell type, pooled
+  61_celltype_atlas_figure.R  Figures 8-9 of the final set
   R/
     utils.R                   logging, sessionInfo capture, run log
     annotate.R                Ensembl ↔ symbol mapping (offline, cached)
@@ -177,7 +203,7 @@ GEO sample IDs by any string rule.
     de.R                      DESeq2 / limma-trend, shrinkage, composition
     deconv.R                  xCell deconvolution
     meta.R                    metafor random-effects pooling
-    figures.R                 the seven figure types
+    figures.R                 the seven core figure types
 
 config/
   datasets.example.csv        the dataset registry format, documented
@@ -248,7 +274,7 @@ If this pipeline contributed to work you are publishing, please cite it:
 > DockVision. *Bulk RNA-seq Meta-Analysis Pipeline*: a reproducible R workflow
 > for cross-study differential expression, cell-composition control and
 > random-effects meta-analysis. Version 1.0.0, 2026.
-> Available at: `https://github.com/<username>/<repository>`
+> Available at: `https://github.com/Dock-Vision/rnaseq-meta-analysis-pipeline`
 
 BibTeX:
 
@@ -260,12 +286,11 @@ BibTeX:
              and random-effects meta-analysis},
   year    = {2026},
   version = {1.0.0},
-  url     = {https://github.com/<username>/<repository>},
+  url     = {https://github.com/Dock-Vision/rnaseq-meta-analysis-pipeline},
   note    = {Accessed: <date>}
 }
 ```
 
-Replace `<username>/<repository>` with the repository URL once it is published.
 Machine-readable metadata is in [`CITATION.cff`](CITATION.cff), which GitHub
 renders as a "Cite this repository" button on the repository page.
 
